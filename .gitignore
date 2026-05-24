@@ -1,0 +1,42 @@
+# Virtual environment
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment variables / secrets
+.env
+
+# Data folders
+data/raw/
+data/processed/
+data/features/
+
+# Models
+*.pkl
+*.joblib
+
+# MLflow artifacts
+mlruns/
+
+# VS Code
+.vscode/
+
+# Mac / Windows junk
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+
+# Temporary files
+temp/
+tmp/
