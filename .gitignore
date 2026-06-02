@@ -40,3 +40,17 @@ Thumbs.db
 # Temporary files
 temp/
 tmp/
+# MLflow
+mlflow.db
+*/mlflow.db
+mlruns/
+*/mlruns/
+
+# Jupyter checkpoints
+*.ipynb_checkpoints
+
+# Alternate virtual env names
+.venv/
+
+# Windows junk
+desktop.ini
