@@ -27,6 +27,9 @@ mlartifacts/
 # VS Code
 .vscode/
 
+#pngs
+outputs/
+
 # Mac / Windows junk
 .DS_Store
 Thumbs.db
