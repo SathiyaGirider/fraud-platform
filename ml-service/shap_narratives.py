@@ -153,10 +153,9 @@ NARRATIVE_MAP: Dict[str, Dict[str, str]] = {
     'uid_amt_mean': {
         'category': 'Transaction Amount Anomaly',
         'text': (
-            "The average transaction amount for this user ID is atypical "
-            "relative to the broader population. An elevated average may "
-            "indicate a pattern of high-value transactions inconsistent "
-            "with expected customer behaviour."
+            "The average transaction amount associated with this user ID differs "
+            "from broader transaction patterns. Elevated average transaction values "
+            "may contribute to the overall fraud risk assessment."
         ),
         'fatf_ref': (
             "Supports transaction-monitoring assessments that may contribute "
@@ -173,9 +172,9 @@ NARRATIVE_MAP: Dict[str, Dict[str, str]] = {
     'uid_amt_std': {
         'category': 'Transaction Amount Anomaly',
         'text': (
-            "The standard deviation of transaction amounts for this user ID "
-            "is atypical — indicating either unusually consistent or unusually "
-            "erratic spending behaviour, both of which may warrant further review."
+            "The variability of transaction amounts associated with this user ID "
+            "contributes to the overall fraud risk assessment. Greater or lower "
+            "variability than expected may warrant additional analyst review."
         ),
         'fatf_ref': (
             "Supports transaction-monitoring assessments that may contribute "
@@ -215,17 +214,18 @@ NARRATIVE_MAP: Dict[str, Dict[str, str]] = {
     'uid_count': {
         'category': 'Identity Association',
         'text': (
-            "The number of unique identities (cards, emails, or devices) "
-            "associated with this user ID is atypical. An unusually high "
-            "count of linked identifiers may indicate account-sharing, "
-            "synthetic identity patterns, or coordinated fraud ring activity."
+            "The number of identities (cards, emails, or devices) associated with "
+            "this user ID contributes to the transaction's identity-association "
+            "risk assessment. Higher levels of linked identifiers may be consistent "
+            "with account sharing, synthetic identity patterns, or coordinated fraud activity."
         ),
         'fatf_ref': (
             "Contributes to monitoring considerations associated with FATF "
-            "R.10 (Customer Due Diligence). Anomalous identity-linkage counts "
-            "are a recognised typology indicator for synthetic identity fraud "
-            "and account-takeover in FATF guidance."
+            "R.10 (Customer Due Diligence). Identity-linkage patterns are "
+            "recognised typology indicators associated with synthetic identity "
+            "fraud and account takeover in FATF guidance."
         ),
+       
         'uk_ref': (
             "Relevant to CDD and EDD obligations under MLR 2017 Regulations "
             "28 and 33, and FCA SYSC 6.3 financial crime controls."
@@ -240,9 +240,9 @@ NARRATIVE_MAP: Dict[str, Dict[str, str]] = {
         'category': 'Device / Network',
         'text': (
             "This transaction either lacks associated device and network "
-            "identity attributes, or the presence of such attributes is "
-            "itself an atypical signal for this card. The absence of device "
-            "fingerprint data may indicate an unusual access channel."
+            "identity attributes, or these attributes contribute to the overall "
+            "device-risk assessment. Limited device fingerprint information "
+            "may warrant additional analyst review."
         ),
         'fatf_ref': (
             "Provides contextual information regarding the availability of "
@@ -339,10 +339,9 @@ NARRATIVE_MAP: Dict[str, Dict[str, str]] = {
     'card3_freq': {
         'category': 'Card / Channel Signal',
         'text': (
-            "A card attribute associated with this transaction is atypical "
-            "relative to the historical population — contributing a contextual "
-            "risk signal."
-        ),
+            "A card attribute associated with this transaction contributes "
+            "a contextual signal to the overall fraud risk assessment."
+),
         'fatf_ref': (
             "Provides contextual support for risk assessments within a FATF "
             "R.20 transaction monitoring framework when combined with other "
@@ -374,8 +373,9 @@ NARRATIVE_MAP: Dict[str, Dict[str, str]] = {
     'card5_freq': {
         'category': 'Card / Channel Signal',
         'text': (
-            "Card sub-type attribute is atypical relative to the historical "
-            "population — contributing a contextual card-level risk signal."
+            "The card sub-type associated with this transaction differs from "
+            "broader transaction patterns, contributing a contextual card-level "
+            "risk signal."
         ),
         'fatf_ref': (
             "Provides contextual support for risk assessments within a FATF "
@@ -391,10 +391,11 @@ NARRATIVE_MAP: Dict[str, Dict[str, str]] = {
     'card6_freq': {
         'category': 'Card / Channel Signal',
         'text': (
-            "Card category (debit, credit, or prepaid) is atypical in this "
-            "transaction context. Prepaid card instruments may present  "
-            "distinct fraud and financial-crime risk considerations."
-        ),
+            "The card category (debit, credit, or prepaid) contributes a "
+            "contextual signal to the overall fraud risk assessment. Certain "
+            "payment instrument types may present distinct fraud and "
+            "financial-crime risk considerations."
+),
         'fatf_ref': (
             "Provides contextual information regarding payment-instrument "
             "characteristics and may contribute to broader transaction-risk "
@@ -572,16 +573,16 @@ FAMILY_MAP: Dict[str, Dict[str, str]] = {
     'C': {
         'category': 'Identity Association',
         'text': (
-            "This signal relates to counts of addresses or other entities "
-            "associated with this payment card. Anomalous association counts "
+            "This signal relates to patterns of addresses or other entities "
+            "associated with this payment card. Identity-association patterns "
             "may indicate elevated identity-linkage risk, informing ongoing "
             "monitoring considerations associated with FATF Recommendation 10."
         ),
         'fatf_ref': (
             "Contributes to monitoring considerations associated with FATF "
-            "R.10 (Customer Due Diligence). Anomalous counts of linked "
-            "identities or addresses are an identity-association typology "
-            "indicator in FATF guidance."
+            "R.10 (Customer Due Diligence). Patterns involving linked "
+            "identities or addresses are recognised as identity-association "
+            "typology indicators in FATF guidance."
         ),
         'uk_ref': (
             "Relevant to CDD and ongoing monitoring obligations under "
@@ -641,9 +642,10 @@ FAMILY_MAP: Dict[str, Dict[str, str]] = {
         'category': 'Device / Network',
         'text': (
             "This signal relates to device or network identity attributes "
-            "associated with the transaction (e.g. browser, OS, or network "
-            "fingerprint characteristics). Atypical attributes may indicate "
-            "elevated channel risk."
+            "associated with the transaction (e.g. browser, operating system, "
+            "or network fingerprint characteristics). These attributes "
+            "contribute contextual information to the overall channel-risk "
+            "assessment."
         ),
         'fatf_ref': (
             "Provides contextual information regarding device and network "
@@ -661,8 +663,9 @@ FAMILY_MAP: Dict[str, Dict[str, str]] = {
         'category': 'Geographic / Location Signal',
         'text': (
             "This signal relates to the billing address region or country "
-            "associated with this card. Atypical or mismatched location "
-            "attributes may indicate elevated geographic or identity risk."
+            "associated with this card. Address-related inconsistencies or "
+            "geographic patterns may contribute to the overall fraud risk "
+            "assessment."
         ),
         'fatf_ref': (
             "Contributes to monitoring considerations associated with FATF "
@@ -750,27 +753,48 @@ def _resolve_narrative(feat: str) -> Dict[str, str]:
 # Risk tier
 # ---------------------------------------------------------------------------
 
-def get_fraud_risk_tier(fraud_prob: float) -> dict:
+def get_fraud_risk_tier(fraud_prob: float, threshold: float = 0.17) -> dict:
     """
-    HIGH     >= 0.75 : Auto-escalation, SAR drafting initiated.
-    ELEVATED 0.40-0.74: Analyst review required.
-    LOW      < 0.40  : Standard monitoring continues.
+    Converts fraud probability to analyst-facing risk tier.
 
-    Re-evaluate thresholds against Week 2 operating point. Document rationale.
+    The bottom boundary of the tier ladder is anchored to the tuned
+    classification threshold (default 0.17, from Week 2 F1-optimal tuning).
+    This ensures internal consistency: any transaction classified as
+    is_fraud=True (prob >= threshold) enters the analyst workflow at
+    MODERATE RISK or above — never LOW RISK.
+
+    Tier boundaries:
+      HIGH RISK     >= 0.75  : Auto-escalation, SAR drafting initiated.
+      ELEVATED RISK >= 0.40  : Analyst review required.
+      MODERATE RISK >= threshold (0.17): Monitor — below ELEVATED but above
+                               the classification boundary.
+      LOW RISK      < threshold        : Below classification threshold —
+                               standard monitoring, no analyst action.
+
+    Args:
+        fraud_prob : model output probability (0.0–1.0)
+        threshold  : classification threshold from threshold.pkl (default 0.17)
     """
     if fraud_prob >= 0.75:
         return {
             'tier':       'HIGH RISK',
             'action':     'ESCALATE — Enhanced analyst investigation required. '
-          'Review transaction context and supporting evidence.',
+                          'Review transaction context and supporting evidence.',
             'color_code': 'RED',
         }
     elif fraud_prob >= 0.40:
         return {
             'tier':       'ELEVATED RISK',
             'action':     'REVIEW — Analyst assessment required. '
-          'Further investigation may be warranted based on transaction context.',
+                          'Further investigation may be warranted based on transaction context.',
             'color_code': 'AMBER',
+        }
+    elif fraud_prob >= threshold:
+        return {
+            'tier':       'MODERATE RISK',
+            'action':     'MONITOR — Transaction flagged above classification threshold. '
+                          'Continue standard transaction monitoring.',
+            'color_code': 'YELLOW',
         }
     else:
         return {
@@ -824,28 +848,39 @@ def build_shap_dict(
     transaction_id: str,
     fraud_prob: float,
     shap_values_row: list,
-    feature_names: list
+    feature_names: list,
+    threshold: float = 0.17,
 ) -> dict:
     """
     Authoritative SHAP explanation artefact for one transaction.
     Consumed by: build_sar_prompt() (Day 17), /predict API response (Week 4),
                  PostgreSQL audit log (Week 4).
 
-    Keys:
+    Args:
+        transaction_id  : transaction identifier string
+        fraud_prob      : model output probability (0.0–1.0)
+        shap_values_row : 1D SHAP values array for this transaction
+        feature_names   : ordered feature column list
+        threshold       : classification threshold from threshold.pkl (default 0.17).
+                          Passed into get_fraud_risk_tier() so the tier ladder bottom
+                          boundary stays consistent with the binary fraud decision.
+
+    Keys returned:
         transaction_id : str
         fraud_score    : float
         risk_tier      : dict  (tier, action, color_code)
-        risk_themes    : list[str]  unique categories in SHAP rank order
-                         → used as SAR section headers by Day 17 drafter
+        risk_themes    : list[str]  unique positive-SHAP categories in rank order
         top_features   : list[dict] → see get_shap_narratives()
     """
     top_features = get_shap_narratives(shap_values_row, feature_names, top_n=5)
-    risk_themes  = list(dict.fromkeys(f['category'] for f in top_features))
+    risk_themes  = list(dict.fromkeys(
+        f['category'] for f in top_features if f['shap_value'] > 0
+    ))
 
     return {
         'transaction_id': transaction_id,
         'fraud_score':    round(float(fraud_prob), 4),
-        'risk_tier':      get_fraud_risk_tier(fraud_prob),
+        'risk_tier':      get_fraud_risk_tier(fraud_prob, threshold=threshold),
         'risk_themes':    risk_themes,
         'top_features':   top_features,
     }

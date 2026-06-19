@@ -67,26 +67,65 @@ assessment.
 # Prompt builder
 # ---------------------------------------------------------------------------
 
-def build_sar_prompt(shap_dict: dict) -> str:
-    score    = shap_dict.get('fraud_score', 0.0)
-    tier_info = shap_dict.get('risk_tier', {})
-    tier     = tier_info.get('tier', 'UNKNOWN')
-    action   = tier_info.get('action', '')
-    features = shap_dict.get('top_features', [])
-    themes   = shap_dict.get('risk_themes', [])
+import re
 
-    risk_factor_lines = [
-        f"- {f['narrative']}"
-        for f in features
-        if f.get('shap_value', 0) > 0
-    ]
+def _clean_narrative_for_llm(text: str) -> str:
+    """
+    Strip FATF/regulatory references from narrative text before passing
+    to the LLM. These belong in the fatf_ref field only — if the LLM
+    sees them in the risk factor lines it will echo them into the brief.
+
+    Removes:
+      - ', informing ongoing monitoring considerations...' tail phrases
+      - ', which informs ongoing monitoring...' variants
+      - Any bare 'FATF Recommendation N' mentions
+    """
+    text = re.sub(
+        r',?\s*informing ongoing monitoring considerations.*$',
+        '', text, flags=re.IGNORECASE | re.DOTALL
+    )
+    text = re.sub(
+        r',?\s*which informs ongoing monitoring.*$',
+        '', text, flags=re.IGNORECASE | re.DOTALL
+    )
+    text = re.sub(
+        r'FATF\s+Recommendation\s+\d+',
+        '', text, flags=re.IGNORECASE
+    )
+    text = text.strip().rstrip('.,')
+    return text + '.'
+
+
+def build_sar_prompt(shap_dict: dict) -> str:
+    score     = shap_dict.get('fraud_score', 0.0)
+    tier_info = shap_dict.get('risk_tier', {})
+    tier      = tier_info.get('tier', 'UNKNOWN')
+    action    = tier_info.get('action', '')
+    features  = shap_dict.get('top_features', [])
+
+    # Deduplicate by category — if 5 features all map to Identity Association,
+    # send one clean signal rather than 5 identical lines.
+    # The LLM was padding to fill 3-5 sentences from repeated identical inputs.
+    seen_categories: set = set()
+    risk_factor_lines = []
+    for f in features:
+        if f.get('shap_value', 0) > 0 and f['category'] not in seen_categories:
+            seen_categories.add(f['category'])
+            risk_factor_lines.append(
+                f"- {_clean_narrative_for_llm(f['narrative'])}"
+            )
+
     if not risk_factor_lines:
         risk_factor_lines = ["- No dominant risk-increasing factors identified."]
 
-    themes_str = (
-        f"Risk theme areas: {', '.join(themes)}" if themes
-        else "Risk theme areas: General"
-    )
+    # Scale sentence count to signal count — prevents padding when few signals
+    n = len(risk_factor_lines)
+    if n <= 1:
+        sentence_guidance = "2–3 sentences"
+    elif n <= 3:
+        sentence_guidance = "3–4 sentences"
+    else:
+        sentence_guidance = "4–5 sentences"
 
     prompt = f"""You are a fraud compliance analyst drafting an investigation brief.
 
@@ -94,26 +133,42 @@ Transaction ID    : {shap_dict.get('transaction_id', 'UNKNOWN')}
 Fraud Risk Score  : {score:.3f} (scale 0.000–1.000)
 Risk Tier         : {tier}
 Recommended Action: {action}
-{themes_str}
 
 Key risk factors identified by the automated detection system:
 {chr(10).join(risk_factor_lines)}
 
-Draft a concise investigation brief (3–5 sentences) that:
+Draft a concise investigation brief ({sentence_guidance}) that:
 1. States the fraud risk tier and overall risk assessment clearly
 2. Describes the specific risk patterns in plain analyst language — do not use \
 feature names with underscores, model terminology, or SHAP jargon
-3. Notes combinations of factors that are particularly significant together
-4. States the recommended next action for the analyst
+3. States the recommended next action for the analyst
 
 Rules:
 - Write only the investigation brief prose. No preamble. No bullet points. \
 No headings. Plain paragraph prose only.
+- Start with "This transaction..." — do not include the transaction ID in the prose.
+- Do not open with "The automated detection system..." — describe what the \
+transaction exhibits, not what a system detected.
 - Do not mention model names, SHAP, XGBoost, Random Forest, or any ML terms.
+- Do not mention FATF, FATF Recommendations, AML regulations, or any compliance \
+framework by name — regulatory references appear only in the separate compliance \
+notice, not in the investigation brief.
+- Use "elevated identity verification risk" rather than "higher risk of identity \
+verification issues" — consistent professional register throughout.
+- Use "continue standard transaction monitoring" rather than "continue monitoring \
+this transaction" — monitoring applies to ongoing activity, not a single completed \
+transaction.
+- Do not repeat the same point twice — if the risk tier already states no \
+immediate action is required, do not restate it at the end of the brief.
 - Do not fabricate information not present in the risk factors above.
+- The risk factors listed above are the ONLY signals driving this assessment. \
+Do not reference any other signals, patterns, or attributes not explicitly \
+listed above, even if they seem relevant.
+- Do not pad the brief — write only as many sentences as the signals support. \
+Do not invent combinations or patterns not directly stated above.
 - Do not assert "this transaction is suspicious" as a bare claim — describe \
 the specific indicators and why they are noteworthy.
-- Language must be professional and appropriate for a compliance file."""
+- Language must be professional and appropriate for an internal case note. Write in the style of a fraud analyst documenting a case — concise, factual, objective. Avoid repetitive phrases such as "The automated detection system has identified", "Additionally", "Furthermore", or other generic report transitions."""
 
     return prompt
 
@@ -194,10 +249,15 @@ def draft_sar_narrative(shap_dict: dict) -> dict:
         )
 
         system_prompt = (
-            "You are a senior compliance analyst writing fraud investigation briefs "
-            "for a financial institution's AML team. Write in clear, professional, "
-            "non-technical language. Be precise and concise. Do not fabricate "
-            "information. Do not use ML or statistical terminology."
+            "You are a senior fraud analyst writing internal case notes "
+            "for a financial institution's fraud and compliance team. "
+            "Write in concise, factual, objective language — the style of an "
+            "experienced analyst documenting a case, not a report generator. "
+            "Base every statement only on the supplied evidence. "
+            "Do not fabricate information. Do not use ML or statistical terminology. "
+            "Avoid generic transitions such as 'Additionally', 'Furthermore', "
+            "'It is worth noting', or 'The automated detection system has identified'. "
+            "Do not use marketing or conversational language."
         )
 
         messages = [
@@ -225,11 +285,14 @@ def draft_sar_narrative(shap_dict: dict) -> dict:
         LLM_MODEL = 'none'
 
     # Deterministic compliance block — always injected regardless of LLM path
+    # MODERATE RISK = above classification threshold but below ELEVATED (0.40).
+    # No compliance escalation notice required — standard monitoring tier.
     if tier == 'HIGH RISK':
         compliance_notice = _ESCALATION_BLOCK_HIGH_RISK.strip()
     elif tier == 'ELEVATED RISK':
         compliance_notice = _ESCALATION_BLOCK_ELEVATED_RISK.strip()
     else:
+        # LOW RISK and MODERATE RISK — no escalation notice
         compliance_notice = None
 
     full_narrative = (
