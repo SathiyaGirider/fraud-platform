@@ -95,7 +95,7 @@ def preprocess_transaction(txn: dict) -> np.ndarray:
 
     # Select features in training order, fill remaining NaN with -999
     # (matches training notebook: X_train = df_train[FEATURE_COLS].fillna(-999))
-    X = df.reindex(columns=feat_cols, fill_value=0).fillna(-999).values
+    X = df.reindex(columns=feat_cols, fill_value=0).fillna(-999)
     return X
 
 
@@ -139,10 +139,20 @@ def predict_and_explain(
     is_fraud   = fraud_prob >= threshold
 
     # 3. SHAP explanation with compliance annotations
-    # Random Forest TreeExplainer returns a list [class0_array, class1_array].
-    # We want class-1 (fraud) SHAP values for the single row (index 0).
-    raw_shap        = explainer.shap_values(X)   # list of 2 arrays, each (1, n_feats)
-    shap_values_row = raw_shap[1][0]             # class-1, first (only) row → 1D
+    # SHAP output shape is RF-specific: depending on shap version this is either
+    # a list [class0_array, class1_array] (each shape (n_samples, n_feats)),
+    # or a single array of shape (n_samples, n_feats, 2). Handle both.
+    raw_shap = explainer.shap_values(X)
+
+    if isinstance(raw_shap, list):
+        # older shap API: list of per-class arrays
+        shap_values_row = raw_shap[1][0]
+    else:
+        # newer shap API: (n_samples, n_feats, n_classes) — take class 1 (fraud)
+        shap_values_row = raw_shap[0, :, 1]
+
+    shap_values_row = np.asarray(shap_values_row, dtype=np.float64)
+
     shap_dict = build_shap_dict(
         transaction_id=str(txn.get('TransactionID', 'UNKNOWN')),
         fraud_prob=fraud_prob,

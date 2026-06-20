@@ -194,3 +194,31 @@ def add_product_features(df_train, df_val, df_test):
     df_val   = pd.concat([df_val,   prod_val],   axis=1)
     df_test  = pd.concat([df_test,  prod_test],  axis=1)
     return df_train, df_val, df_test
+
+# feature_engineering.py — add this pair
+
+def build_cat_id_freq_maps(df_train, cat_id_cols):
+    """
+    Compute frequency maps for categorical id_ columns from the full
+    training set. Save the returned dict as models/cat_id_freq_maps.pkl.
+    Call this once in the training notebook, same pattern as build_uid_stats.
+    """
+    return {
+        col: df_train[col].value_counts(normalize=True)
+        for col in cat_id_cols
+    }
+
+
+def apply_cat_id_freq_features(df, cat_id_freq_maps):
+    """
+    Apply pre-computed cat_id frequency maps to a df (one row or full split).
+    cat_id_freq_maps must come from build_cat_id_freq_maps(df_train, cat_id_cols)
+    or be loaded from pkl — never recomputed from a sample at inference.
+    """
+    df = df.copy()
+    for col, freq in cat_id_freq_maps.items():
+        if col in df.columns:
+            df[f'{col}_freq'] = df[col].map(freq).fillna(0)
+        else:
+            df[f'{col}_freq'] = 0
+    return df
