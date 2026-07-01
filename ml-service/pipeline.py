@@ -35,7 +35,16 @@ feat_cols = joblib.load('../models/feature_cols.pkl')
 threshold = joblib.load('../models/threshold.pkl')      # from Week 2 tuning
 uid_stats = joblib.load('../models/uid_stats.pkl')      # from build_uid_stats(df_train)
 df_train  = joblib.load('../models/df_train_sample.pkl')  # small sample for freq encoding lookups
-explainer = shap_lib.TreeExplainer(model)
+_bg_sample = (
+    df_train.sample(100, random_state=42)[feat_cols]
+    .fillna(-999)
+    .to_numpy(dtype=np.float64)
+)
+explainer = shap_lib.TreeExplainer(
+    model,
+    data=_bg_sample,
+    feature_perturbation="interventional"
+)
 
 # prod_cols derived from feat_cols — no separate pkl needed
 prod_cols = [c for c in feat_cols if c.startswith('prod_')]
@@ -142,7 +151,7 @@ def predict_and_explain(
     # SHAP output shape is RF-specific: depending on shap version this is either
     # a list [class0_array, class1_array] (each shape (n_samples, n_feats)),
     # or a single array of shape (n_samples, n_feats, 2). Handle both.
-    raw_shap = explainer.shap_values(X)
+    raw_shap = explainer.shap_values(X, check_additivity=False)
 
     if isinstance(raw_shap, list):
         # older shap API: list of per-class arrays
