@@ -35,6 +35,7 @@ feat_cols = joblib.load('../models/feature_cols.pkl')
 threshold = joblib.load('../models/threshold.pkl')      # from Week 2 tuning
 uid_stats = joblib.load('../models/uid_stats.pkl')      # from build_uid_stats(df_train)
 df_train  = joblib.load('../models/df_train_sample.pkl')  # small sample for freq encoding lookups
+cat_id_freq_maps = joblib.load('../models/cat_id_freq_maps.pkl')
 _bg_sample = (
     df_train.sample(100, random_state=42)[feat_cols]
     .fillna(-999)
@@ -94,23 +95,62 @@ def preprocess_transaction(txn: dict) -> np.ndarray:
             df[col] = df[col].map({'T': 1, 'F': 0}).fillna(-1)
 
     # Categorical id_ columns: freq encode from df_train
-    cat_id_cols = [
-        c for c in df.columns
-        if c.startswith('id_') and df[c].dtype == 'object'
-    ]
-    for col in cat_id_cols:
-        freq = df_train[col].value_counts(normalize=True) if col in df_train.columns else pd.Series(dtype=float)
-        df[f'{col}_freq'] = df[col].map(freq).fillna(0)
+    # Categorical id_ columns: freq encode using precomputed training maps
+    # (built once from full df_train — see training notebook — not recomputed per call)
+    for col, freq in cat_id_freq_maps.items():
+        if col in df.columns:
+            df[f'{col}_freq'] = df[col].map(freq).fillna(0)
+        else:
+            df[f'{col}_freq'] = 0
+    # cat_id_cols = [
+    #     c for c in df.columns
+    #     if c.startswith('id_') and df[c].dtype == 'object'
+    # ]
+    # for col in cat_id_cols:
+    #     freq = df_train[col].value_counts(normalize=True) if col in df_train.columns else pd.Series(dtype=float)
+    #     df[f'{col}_freq'] = df[col].map(freq).fillna(0)
 
     # Select features in training order, fill remaining NaN with -999
     # (matches training notebook: X_train = df_train[FEATURE_COLS].fillna(-999))
-    X = df.reindex(columns=feat_cols, fill_value=0).fillna(-999)
+    X = df.reindex(columns=feat_cols).fillna(-999)
     return X
 
 
 # ---------------------------------------------------------------------------
 # Full prediction + explanation + narrative pipeline
 # ---------------------------------------------------------------------------
+from collections import OrderedDict
+
+def group_top_features(top_features: list) -> list:
+    """
+    Groups risk-increasing SHAP features by category for cleaner API output.
+    Mirrors _print_shap_grouped() from the Day 18 notebook — same grouping
+    logic, JSON output instead of print statements.
+    """
+    positive = [f for f in top_features if f.get('shap_value', 0) > 0]
+    if not positive:
+        return []
+
+    groups = OrderedDict()
+    for f in positive:
+        category = f.get('category', 'Unknown')
+        groups.setdefault(category, []).append(f)
+
+    grouped = []
+    for category, features in groups.items():
+        rep = features[0]
+        grouped.append({
+            'category': category,
+            'features': [
+                {'feature': f['feature'], 'shap_value': f['shap_value'], 'abs_impact': f['abs_impact']}
+                for f in features
+            ],
+            'narrative': rep['narrative'],
+            'fatf_ref': rep['fatf_ref'],
+            'uk_ref': rep['uk_ref'],
+        })
+    return grouped
+
 
 def predict_and_explain(
     txn: dict,
@@ -179,8 +219,10 @@ def predict_and_explain(
         'fraud_score':         round(fraud_prob, 4),
         'is_fraud':            bool(is_fraud),
         'risk_tier':           shap_dict['risk_tier'],
-        'top_shap':            shap_dict['top_features'],
+        'risk_themes':         shap_dict.get('risk_themes', []),
+        'top_shap':            group_top_features(shap_dict['top_features']),
         'narrative':           narrative_output,
         'model_version':       'fraud_rf_ieee',
         'pipeline_latency_ms': round((t_end - t_start) * 1000, 1),
     }
+
