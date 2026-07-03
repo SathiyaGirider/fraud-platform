@@ -221,6 +221,7 @@ def predict_and_explain(
         'risk_tier':           shap_dict['risk_tier'],
         'risk_themes':         shap_dict.get('risk_themes', []),
         'top_shap':            group_top_features(shap_dict['top_features']),
+        'top_shap_flat':       shap_dict['top_features'],
         'narrative':           narrative_output,
         'model_version':       'fraud_rf_ieee',
         'pipeline_latency_ms': round((t_end - t_start) * 1000, 1),
