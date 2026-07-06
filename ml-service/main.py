@@ -2,11 +2,14 @@ from fastapi import FastAPI,HTTPException
 from pydantic import BaseModel,Field
 from typing import Optional,List,Dict
 import time
+import json
 from datetime import datetime,UTC
 from pipeline import predict_and_explain
+from database import log_prediction,init_db,SessionLocal,PredictionLog
+
 
 app=FastAPI(title='Fraud Intelligence Platform',
-            description='Explainable fraud detection with SHAP narratives and complaince-mapped audit logging',
+            description='Explainable fraud detection with SHAP narratives and compliance-mapped audit logging',
             version="1.0.0")
 
 class TransactionRequest(BaseModel):
@@ -172,6 +175,14 @@ def health():
         "timestamp":datetime.now(UTC).isoformat()
     }
 
+from contextlib import asynccontextmanager
+@asynccontextmanager
+async def lifespan(app:FastAPI):
+    # Startup
+    init_db()
+    print("Database initialized")
+    yield
+
 @app.post("/predict",response_model=PredictionResponse)
 def predict(request:TransactionRequest):
     txn=request.model_dump()
@@ -183,7 +194,32 @@ def predict(request:TransactionRequest):
     except Exception as e:
         raise HTTPException(status_code=500,detail=str(e))
     
+    try:
+        log_prediction(result)
+    except Exception as e:
+        print(f"Audit log failed: {e}")
+    
     return result
 
 
 
+@app.get("/predictions")
+def get_predictions(limit:int=20):
+    db=SessionLocal()
+    rows=(db.query(PredictionLog).order_by(PredictionLog.timestamp.desc()).limit(limit).all())
+    db.close()
+
+    return [
+        {
+            "id":r.id,
+            "transaction_id":r.transaction_id,
+            "timestamp":r.timestamp.isoformat(),
+            "is_fraud":r.is_fraud,
+            "fraud_score":r.fraud_score,
+            "risk_tier":r.risk_tier,
+            "model_version":r.model_version,
+            "top_shap":json.loads(r.shap_json)if r.shap_json else [],
+            "narrative":json.loads(r.narrative) if r.narrative else None,
+        }
+        for r in rows
+    ]
