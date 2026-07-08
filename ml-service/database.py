@@ -2,8 +2,9 @@ from sqlalchemy import create_engine,Column,String,Float,Boolean,Integer,DateTim
 from sqlalchemy.orm import DeclarativeBase,Mapped,mapped_column,sessionmaker
 import os
 import json
+from dotenv import load_dotenv
 from datetime import datetime,UTC
-
+load_dotenv()
 DATABASE_URL =os.environ.get(
     'DATABASE_URL',
     'postgresql://postgres:password@localhost:5432/fraud_platform'
