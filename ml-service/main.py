@@ -14,7 +14,7 @@ app=FastAPI(title='Fraud Intelligence Platform',
 
 class TransactionRequest(BaseModel):
     # Required core
-    TransactionID:str
+    TransactionID:int
     TransactionDT:int
     TransactionAmt:float=Field(...,gt=0)
     ProductCD:str
@@ -153,7 +153,7 @@ class NarrativeOutput(BaseModel):
     narrative_source:Optional[str]=None
 
 class PredictionResponse(BaseModel):
-    transaction_id:str
+    transaction_id:int
     fraud_score:float
     is_fraud:bool
     risk_tier:RiskTier
