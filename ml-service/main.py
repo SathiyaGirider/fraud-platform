@@ -6,11 +6,17 @@ import json
 from datetime import datetime,UTC
 from pipeline import predict_and_explain
 from database import log_prediction,init_db,SessionLocal,PredictionLog
-
+from contextlib import asynccontextmanager
+@asynccontextmanager
+async def lifespan(app:FastAPI):
+    # Startup
+    init_db()
+    print("Database initialized")
+    yield
 
 app=FastAPI(title='Fraud Intelligence Platform',
             description='Explainable fraud detection with SHAP narratives and compliance-mapped audit logging',
-            version="1.0.0")
+            version="1.0.0",lifespan=lifespan,)
 
 class TransactionRequest(BaseModel):
     # Required core
@@ -175,13 +181,7 @@ def health():
         "timestamp":datetime.now(UTC).isoformat()
     }
 
-from contextlib import asynccontextmanager
-@asynccontextmanager
-async def lifespan(app:FastAPI):
-    # Startup
-    init_db()
-    print("Database initialized")
-    yield
+
 
 @app.post("/predict",response_model=PredictionResponse)
 def predict(request:TransactionRequest):

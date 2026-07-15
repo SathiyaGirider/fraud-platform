@@ -58,3 +58,5 @@ mlruns/
 
 # Windows junk
 desktop.ini
+
+.dockerignore
