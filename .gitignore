@@ -19,6 +19,8 @@ data/features/
 # Models
 *.pkl
 *.joblib
+!models/*.pkl
+!models/*.joblib
 
 # MLflow artifacts
 mlruns/
