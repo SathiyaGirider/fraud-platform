@@ -1,6 +1,6 @@
 from fastapi import FastAPI,HTTPException
 from pydantic import BaseModel,Field
-from typing import Optional,List,Dict
+from typing import Optional,List,Dict,Literal
 import time
 import json
 from datetime import datetime,UTC
@@ -169,6 +169,10 @@ class PredictionResponse(BaseModel):
     model_version:str
     pipeline_latency_ms:float
 
+class AnalystAction(BaseModel):
+    status: Literal["confirmed_fraud", "false_positive", "escalated"]
+    analyst_id: str
+
 startup_time=datetime.now(UTC)
 
 @app.get("/health")
@@ -202,24 +206,94 @@ def predict(request:TransactionRequest):
     return result
 
 
+@app.patch("/predictions/{transaction_id}")
+def update_prediction_status(transaction_id: str, action: AnalystAction):
+    db = SessionLocal()
+    try:
+        record = db.query(PredictionLog).filter(
+            PredictionLog.transaction_id == transaction_id
+        ).first()
+
+        if not record:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+
+        record.status = action.status
+        record.analyst_id = action.analyst_id
+        record.action_timestamp = datetime.now(UTC)
+
+        db.commit()
+        db.refresh(record)
+
+        return {
+            "transaction_id": record.transaction_id,
+            "status": record.status,
+            "analyst_id": record.analyst_id,
+            "action_timestamp": record.action_timestamp.isoformat(),
+        }
+    finally:
+        db.close()
+
 
 @app.get("/predictions")
-def get_predictions(limit:int=20):
-    db=SessionLocal()
-    rows=(db.query(PredictionLog).order_by(PredictionLog.timestamp.desc()).limit(limit).all())
-    db.close()
+def get_predictions(
+    limit: int = 20,
+    offset: int = 0,
+    status: Optional[str] = None,
+    transaction_id: Optional[str] = None,
+):
+    db = SessionLocal()
+    try:
+        query = db.query(PredictionLog)
 
-    return [
-        {
-            "id":r.id,
-            "transaction_id":r.transaction_id,
-            "timestamp":r.timestamp.isoformat(),
-            "is_fraud":r.is_fraud,
-            "fraud_score":r.fraud_score,
-            "risk_tier":r.risk_tier,
-            "model_version":r.model_version,
-            "top_shap":json.loads(r.shap_json)if r.shap_json else [],
-            "narrative":json.loads(r.narrative) if r.narrative else None,
+        if transaction_id:
+            query = query.filter(PredictionLog.transaction_id.contains(transaction_id))
+        if status:
+            query = query.filter(PredictionLog.status == status)
+
+        total = query.count()
+        rows = query.order_by(PredictionLog.timestamp.desc()).offset(offset).limit(limit).all()
+
+        return {
+            "total": total,
+            "results": [
+                {
+                    "id": r.id,
+                    "transaction_id": r.transaction_id,
+                    "timestamp": r.timestamp.isoformat(),
+                    "is_fraud": r.is_fraud,
+                    "fraud_score": r.fraud_score,
+                    "risk_tier": r.risk_tier,
+                    "model_version": r.model_version,
+                    "status": r.status,
+                    "analyst_id": r.analyst_id,
+                    "action_timestamp": r.action_timestamp.isoformat() if r.action_timestamp else None,
+                    "top_shap": json.loads(r.shap_json) if r.shap_json else [],
+                    "narrative": json.loads(r.narrative) if r.narrative else None,
+                }
+                for r in rows
+            ],
         }
-        for r in rows
-    ]
+    finally:
+        db.close()
+
+# Old code under
+# @app.get("/predictions")
+# def get_predictions(limit:int=20):
+#     db=SessionLocal()
+#     rows=(db.query(PredictionLog).order_by(PredictionLog.timestamp.desc()).limit(limit).all())
+#     db.close()
+
+#     return [
+#         {
+#             "id":r.id,
+#             "transaction_id":r.transaction_id,
+#             "timestamp":r.timestamp.isoformat(),
+#             "is_fraud":r.is_fraud,
+#             "fraud_score":r.fraud_score,
+#             "risk_tier":r.risk_tier,
+#             "model_version":r.model_version,
+#             "top_shap":json.loads(r.shap_json)if r.shap_json else [],
+#             "narrative":json.loads(r.narrative) if r.narrative else None,
+#         }
+#         for r in rows
+#     ]

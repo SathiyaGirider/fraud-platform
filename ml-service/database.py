@@ -36,6 +36,11 @@ class PredictionLog(Base):
     narrative: Mapped[str]=mapped_column(Text)   # json.dumps(narrative dict)
     pipeline_latency_ms: Mapped[float]=mapped_column(Float)
 
+    status: Mapped[str]=mapped_column(String(20), default="pending", server_default="pending", nullable=False)
+    analyst_id: Mapped[str]=mapped_column(String(50), nullable=True)
+    action_timestamp: Mapped[datetime]=mapped_column(DateTime, nullable=True)
+
+
 def init_db():
     # Create tables if they dont exist
     Base.metadata.create_all(bind=engine)
@@ -66,4 +71,17 @@ def log_prediction(result:dict):
         raise e
     finally:
         db.close()
+
+def add_analyst_columns():
+    """Run once against Neon to patch the existing table. Safe to re-run — IF NOT EXISTS guards it."""
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        conn.execute(text("""
+            ALTER TABLE prediction_log
+            ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'pending',
+            ADD COLUMN IF NOT EXISTS analyst_id VARCHAR(50),
+            ADD COLUMN IF NOT EXISTS action_timestamp TIMESTAMP;
+        """))
+        conn.commit()
+    print("Analyst columns added")
 

@@ -1,0 +1,2 @@
+from database import add_analyst_columns
+add_analyst_columns()
