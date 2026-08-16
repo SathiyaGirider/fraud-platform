@@ -62,3 +62,6 @@ mlruns/
 desktop.ini
 
 .dockerignore
+
+#extra proj file
+ml-service/notebooks/06_proj.ipynb
