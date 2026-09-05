@@ -226,7 +226,7 @@ def draft_sar_narrative(shap_dict: dict) -> dict:
     tier     = shap_dict.get('risk_tier', {}).get('tier', 'LOW RISK')
     features = shap_dict.get('top_features', [])
 
-    LLM_MODEL = 'llama-3.3-70b-versatile'
+    LLM_MODEL = 'openai/gpt-oss-120b'
     narrative_source = 'llm'
 
     try:
@@ -242,11 +242,12 @@ def draft_sar_narrative(shap_dict: dict) -> dict:
             )
 
         llm = ChatGroq(
-            model=LLM_MODEL,
-            temperature=0.2,
-            max_tokens=400,
-            api_key=api_key
-        )
+        model=LLM_MODEL,
+        temperature=0.2,
+        max_tokens=800,           # was 400 — room for reasoning + answer
+        reasoning_effort="low",   # new — caps hidden reasoning so it doesn't eat the whole budget
+        api_key=api_key
+)
 
         system_prompt = (
             "You are a senior fraud analyst writing internal case notes "
@@ -266,7 +267,7 @@ def draft_sar_narrative(shap_dict: dict) -> dict:
         ]
 
         response = llm.invoke(messages)
-
+        
         investigation_brief = (
             response.content.strip()
             if response and response.content
